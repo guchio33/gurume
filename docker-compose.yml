@@ -1,42 +1,45 @@
-version: "3"
+version: '3.7'
 
 services:
   db:
     image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: password
+    platform: linux/x86_64
     command: --default-authentication-plugin=mysql_native_password
-    volumes:
-      - mysql-data:/var/lib/mysql
-      - /tmp/dockerdir:/etc/mysql/conf.d/
     ports:
-      - 3306:3306
-
-  api:
+      - "4306:3306"
+    volumes:
+      - db:/var/lib/mysql
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+    security_opt:
+      - seccomp:unconfined
+  backend:
     build:
       context: ./backend/
       dockerfile: Dockerfile
-    command: /bin/sh -c "rm -f /myapp/tmp/pids/server.pid && bundle exec rails s -p 5000 -b '0.0.0.0'"
-    image: rails:dev
+    stdin_open: true
+    tty: true
     volumes:
       - ./backend:/myapp
-      - ./backend/vendor/bundle:/myapp/vendor/bundle
-    environment:
-      TZ: Asia/Tokyo
-      RAILS_ENV: development
-    ports:
-      - 5000:5000
+      - bundle:/usr/local/bundle
+    command: bash -c "rm -rf tmp/pids/server.pid && bundle exec rails s -p 5000 -b '0.0.0.0'"
     depends_on:
       - db
-  front:
+    ports:
+      - "5000:5000"
+    environment:
+      TZ: Asia/Tokyo
+  frontend:
     build:
       context: ./frontend/
       dockerfile: Dockerfile
     volumes:
       - ./frontend:/usr/src/app
-    command: sh -c "cd app && yarn && yarn start"
+    command: sh -c "cd app && npm start"
     ports:
       - "3000:3000"
-
 volumes:
-  mysql-data:
+  db:
+    driver: local
+  bundle:
+    driver: local
