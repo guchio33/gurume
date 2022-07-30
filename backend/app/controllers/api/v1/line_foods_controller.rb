@@ -2,9 +2,30 @@ module Api
     module V1
         class LineFoodsController < ApplicationController
             #フィルタアクション
-            before_action :set_food, only: %i[create] 
-            def create
+            before_action :set_food, only: %i[create]
+            
+            #仮注文の一覧
+            def index 
+                line_foods = LineFood.active
 
+                if line_foods.exists? #line_foodsが DBに存在するかどうか？
+                    render json: {
+                        line_food_ids: line_foods.map{|line_food| line_food.id},
+                        line_foods[0].restaurant,
+                        count: line_foods.sum { |line_food| line_food[:count]}
+                        amount: line_foods.sum { |line_food| line_food.total_amount }                        
+                    }
+                else
+                     render json: {}, status: :no_content
+                end
+            end
+            
+            
+
+
+
+            #仮注文の作成
+            def create
                 #例外処理
                 if LineFood.active.other_restaurant(@ordered_food.restaurant.id).exists?
                     return render json: {
